@@ -1,6 +1,10 @@
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+
 public class RBTree<T extends Comparable<T>> {
-	final boolean red = true; 
-	final boolean black = false;
+	final boolean RED = true; 
+	final boolean BLACK = false;
 	
 	private Node root = null;
 	
@@ -13,8 +17,6 @@ public class RBTree<T extends Comparable<T>> {
 		 Node left;
 		 Node right;
 		 Node parent;
-		 Node uncle;
-		 Node grandparent;
 		 
 		 public Node(T data, Node parent, boolean color) {
 		 this.data = data;
@@ -49,11 +51,11 @@ public class RBTree<T extends Comparable<T>> {
 			 }
 		 
 		 // Neuen Knoten an passende stelle einf¸gen
-		 Node newNode = new Node(key, parent, red);
+		 Node newNode = new Node(key, parent, RED);
 		 
 		 // Der neue Knoten ist die Wurzel
 		 if (parent == null) {
-		 root = newNode;
+			 root = newNode;
 		 } 
 		 
 		 // Der neue Knoten ist ein linkes Kind
@@ -70,78 +72,67 @@ public class RBTree<T extends Comparable<T>> {
 		 fixRedBlackPropertiesAfterInsert(newNode);
 	}
 	
+ // Methode zum Korrigieren der Rot-Schwarz-Bedingungen nach dem Einf¸gen
 	public void fixRedBlackPropertiesAfterInsert(Node node){
-		// Beziehungen des Knotens festlegen
-		Node parent = node.parent;
-		Node grandparent;
-		Node uncle;
 		
-		// Knoten ist Wurzel und hat somit Kein Vater, Groﬂvateroder und Onkel  
-		if(parent == null){
-			node = root;
-			grandparent = null;
-			uncle = null;
-			}
-		// Vater ist Wurzel und hat somit kein Groﬂvater und Onkel
-		else if (parent.parent == null) {
-				parent = root;
-				grandparent = null;
-				uncle = null;
-			}
-		// Groﬂvater ist Vaters Vater und Onkel ist der jeweils andere Kind des Groﬂvaters
-		else {
-			grandparent = parent.parent;
-			uncle = (node == grandparent.left) ? grandparent.right : grandparent.left;
-			}
-		
-		// Fall 1: Der neue Knoten ist die Wurzel
-		if (node == root) {
-			node.color = black;
-			return;
-		}
-		
-		// Fall 2: Der Vater ist die Wurzel und rot		
-		if (parent == root && parent.color == red) {
-			parent.color = black;
-	        
-			// Fall 3: Vater und Onkelknoten sind rot
-			if (uncle != null && uncle.color == red && parent.color == red) {
-	            uncle.color = black;
-	            grandparent.color = red;
-	            fixRedBlackPropertiesAfterInsert(grandparent); // Rekursiver Aufruf f¸r den Groﬂvaterknoten
-	            }
-			return;
-			}
-		
-		// Fall 4: Vater ist rot, Onkel ist schwarz, Knoten ist ìinnerer Enkelî 
-		if (parent.color == red && (uncle == null || uncle.color == black)) {
-			// Knoten ist rechtes inneres Kind
-			if(node == parent.right && parent == grandparent.left){
-				rotateLeft(parent);// Vater links rotieren
-				fixRedBlackPropertiesAfterInsert(parent);// Rekursiver Aufruf f¸r den vaterknoten
-				return;
-			}
-			// Knoten ist linkes inneres Kind
-			else if(node == parent.left && parent == grandparent.right){
-				rotateRight(parent);// Vater rechts rotieren
-				fixRedBlackPropertiesAfterInsert(parent);// Rekursiver Aufruf f¸r den vaterknoten
-				return;
-			}
-			
-			// Fall 5: Vater ist rot, Onkel ist schwarz, Knoten ist ì‰uﬂerer Enkelî
-			// Knoten ist rechtes ‰uﬂeres Kind
-			else if(node == parent.right && parent == grandparent.right){
-				rotateLeft(grandparent);// Groﬂvater links rotieren
-				fixRedBlackPropertiesAfterInsert(grandparent);// Rekursiver Aufruf f¸r den Groﬂvaterknoten
-				return;
-			}
-			// Knoten ist linkes ‰uﬂeres Kind
-			else {
-				rotateRight(grandparent);// Groﬂvater rechts rotieren
-				fixRedBlackPropertiesAfterInsert(grandparent);// Rekursiver Aufruf f¸r den Groﬂvaterknoten
-				return;
-			}
-		}
+		 // Solange der aktuelle Knoten nicht die Wurzel ist und der Vater rot ist, weitermachen
+        while (node != root && node.parent != root && node.parent.color == RED) {
+            // Vater ist linkes Kind des Groﬂvaters
+            if (node.parent == node.parent.parent.left) {
+                Node uncle = node.parent.parent.right;
+ 
+                // Fall 3: Vater und Onkelknoten sind rot
+                if (uncle != null && uncle.color == RED) {
+                    // Vater und Onkel auf Schwarz setzen, Groﬂvater auf Rot setzen
+                    node.parent.color = BLACK;
+                    uncle.color = BLACK;
+                    node.parent.parent.color = RED;
+                    // Mit dem Groﬂvater fortsetzen
+                    node = node.parent.parent;
+                } else {
+                    // Fall 4: Vater ist rot, Onkel ist schwarz, Knoten ist ìinnerer Enkelî
+                    if (node == node.parent.right) {
+                        // Knoten ist rechtes und Vater linkes Kind also Linksrotation des Vaters durchf¸hren
+                        node = node.parent;
+                        rotateLeft(node);
+                    }
+                    // Fall 5: Vater ist rot, Onkel ist schwarz, Knoten ist ì‰uﬂerer Enkelî
+                    // Knoten und Vater sind linke Kinder also Vater und Groﬂvater umf‰rben und Rechtsrotation des Groﬂvaters durchf¸hren
+                    node.parent.color = BLACK;
+                    node.parent.parent.color = RED;
+                    rotateRight(node.parent.parent);
+                }
+            } else {
+                // Vater ist rechtes Kind des Groﬂvaters (spiegelt das davor)
+                Node uncle = node.parent.parent.left;
+ 
+                // Fall 3: Vater und Onkelknoten sind rot
+                if (uncle != null && uncle.color == RED) {
+                    // Vater und Onkel auf Schwarz setzen, Groﬂvater auf Rot setzen
+                    node.parent.color = BLACK;
+                    uncle.color = BLACK;
+                    node.parent.parent.color = RED;
+                    // Mit dem Groﬂvater fortsetzen
+                    node = node.parent.parent;
+                } else {
+                    // Fall 4: Vater ist rot, Onkel ist schwarz, Knoten ist ìinnerer Enkelî
+                    if (node == node.parent.left) {
+                        // Knoten ist linkes und Vater ist rechtes Kind also Rechtsrotation des Vaters durchf¸hren
+                        node = node.parent;
+                        rotateRight(node);
+                    }
+                    // Fall 5: Vater ist rot, Onkel ist schwarz, Knoten ist ì‰uﬂerer Enkelî
+                    // Knoten und Vater sind rechte Kinder also Vater und Groﬂvater umf‰rben und Linksrotation des Groﬂvaters durchf¸hren
+                    node.parent.color = BLACK;
+                    node.parent.parent.color = RED;
+                    rotateLeft(node.parent.parent);
+                }
+            }
+        }
+        /* Fall 1: Der neue Knoten ist die Wurzel und 
+         * Fall 2: Der Vater ist die Wurzel und rot
+         * Die wurzel wird immer Schwarz gef‰rbt */
+        root.color = BLACK;
 	}
 	
 	// rechts Rotation eines Knotens
@@ -207,4 +198,43 @@ public class RBTree<T extends Comparable<T>> {
 			newChild.parent = parent;
 			}
 	}
+	
+	// Methode zum Drucken des Baums in DOT-Format
+    public void printDOT(String filename) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
+            writer.write("digraph G {\n");
+            writer.write("  node [fontname=\"Arial\"];\n");
+ 
+            if (root != null) {
+                printDOTRecursive(root, writer);
+            }
+ 
+            writer.write("}\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+ 
+    // Rekursive Methode zum Drucken der Baumstruktur
+    private void printDOTRecursive(Node node, BufferedWriter writer) throws IOException {
+        if (node.left != null) {
+            writer.write("  \"" + node.data + "\" -> \"" + node.left.data + "\" [label=\"L\"];\n");
+            printDOTRecursive(node.left, writer);
+        } else {
+            writer.write("  \"" + node.data + "\" -> \"null" + node.data + "L\";\n");
+            writer.write("  \"null" + node.data + "L\" [shape=point];\n");
+        }
+ 
+        if (node.right != null) {
+            writer.write("  \"" + node.data + "\" -> \"" + node.right.data + "\" [label=\"R\"];\n");
+            printDOTRecursive(node.right, writer);
+        } else {
+            writer.write("  \"" + node.data + "\" -> \"null" + node.data + "R\";\n");
+            writer.write("  \"null" + node.data + "R\" [shape=point];\n");
+        }
+ 
+        // Farbe des Knotens in der DOT-Ausgabe
+        String color = node.color == RED ? "red" : "black";
+        writer.write("  \"" + node.data + "\" [color=" + color + ", fontcolor=" + color + "];\n");
+    }
 }
